@@ -151,9 +151,11 @@ contract Gluttons is ERC721A, Ownable, ReentrancyGuard {
     function buyFoodPackWeek(address _user) external payable nonReentrant {
         if (!s_gameActive) revert Gluttons__GameEnded();
         if (msg.value < FOOD7_PRICE) revert Gluttons__IncorrectEthAmount(msg.value);
-        (bool success, ) = s_foodContract.call{value: FOOD7_PRICE}(
+
+        bool success = GluttonsFood(s_foodContract).mintFoodPackWeek{value: msg.value}(_user);
+        /*(bool success, ) = s_foodContract.call{value: FOOD7_PRICE}(
             abi.encodeWithSignature("mintFoodPackWeek(address)", _user)
-        );
+        );*/
         if (!success) revert Gluttons__FoodPurchaseFailed();
         
         // Add to prize pool (90% of food price)
@@ -168,9 +170,10 @@ contract Gluttons is ERC721A, Ownable, ReentrancyGuard {
     function buyFoodPackMonth(address _user) external payable nonReentrant {
         if (!s_gameActive) revert Gluttons__GameEnded();
         if (msg.value < FOOD30_PRICE) revert Gluttons__IncorrectEthAmount(msg.value);
-        (bool success, ) = s_foodContract.call{value: FOOD30_PRICE}(
+        bool success = GluttonsFood(s_foodContract).mintFoodPackMonth{value: msg.value}(_user);
+        /*(bool success, ) = s_foodContract.call{value: FOOD30_PRICE}(
             abi.encodeWithSignature("mintFoodPackMonth(address)", _user)
-        );
+        );*/
         if (!success) revert Gluttons__FoodPurchaseFailed();
         
         // Add to prize pool (90% of food price)
@@ -383,6 +386,13 @@ contract Gluttons is ERC721A, Ownable, ReentrancyGuard {
         if (value == 0) revert Gluttons__ZeroValueToTransfer();
         (bool success, ) = to.call{value: value}("");
         if (!success) revert Gluttons__WithdrawTransferFailed();
+    }
+
+    /**
+     * User to set the first token id as 1.
+     */
+    function _startTokenId() internal view virtual override returns (uint256) {
+        return 1;
     }
     
     /**

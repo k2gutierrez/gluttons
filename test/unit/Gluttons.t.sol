@@ -140,7 +140,7 @@ contract GluttonsTest is Test {
         mintPet(USER, 1);
         buyFoodPackWeek(USER);
         
-        uint256 tokenId = 0;
+        uint256 tokenId = 1;
         uint256 foodTokenId = 0;
         feedPet(USER, tokenId, foodTokenId);
         
@@ -152,7 +152,7 @@ contract GluttonsTest is Test {
     function testFeedFailsWhenNotOwner() public {
         mintPet(USER, 1);
         buyFoodPackWeek(USER);
-        uint256 tokenId = 0;
+        uint256 tokenId = 1;
         
         vm.prank(USER2);
         vm.expectRevert(Gluttons.Gluttons__NotTheOwnerOfTheToken.selector);
@@ -162,7 +162,7 @@ contract GluttonsTest is Test {
     // Reaper Execution Tests
     function testExecuteReaper() public {
         mintPet(USER, 1);
-        uint256 tokenId = 0;
+        uint256 tokenId = 1;
         
         // Fast forward to starvation time
         vm.warp(block.timestamp + STARVATION_TIME + 1);
@@ -229,12 +229,12 @@ contract GluttonsTest is Test {
         buyFoodPackWeek(USER2);
         mintPet(ORACLE, 1);
         buyFoodPackWeek(ORACLE);
-        feedPet(USER, 0, 0);
-        feedPet(ORACLE, 2, 14);
+        feedPet(USER, 1, 0);
+        feedPet(ORACLE, 3, 14);
         
         // USER votes
         vm.prank(USER);
-        basicNft.castVote(true, 0);
+        basicNft.castVote(true, 1);
 
         assertEq(basicNft.s_totalVotes(), 1);
         
@@ -382,7 +382,7 @@ contract GluttonsTest is Test {
         uint256 startingContractBalance = basicNft.getTotalPrizePool();
         uint256 valueForTransfer = 1e18;
         vm.prank(USER);
-        basicNft.transferFrom{value: valueForTransfer}(USER, USER2, 0);
+        basicNft.transferFrom{value: valueForTransfer}(USER, USER2, 1);
 
         uint256 balanceTokenUser2 = basicNft.balanceOf(USER2);
         assertEq(balanceTokenUser2, 1);
