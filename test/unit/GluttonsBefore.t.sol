@@ -16,8 +16,8 @@ contract GluttonsBeforeTest is Test {
 
     uint256 constant STARTING_BALANCE = 400 ether;
     uint256 public constant PET_PRICE = 162e18;
-    uint256 private constant FOOD7_PRICE = 7e18;
-    uint256 private constant FOOD30_PRICE = 15e18;
+    uint256 private constant FOOD7_PRICE = 14e18;
+    uint256 private constant FOOD30_PRICE = 30e18;
 
     Gluttons basicNft;
     GluttonsFood foodNft;

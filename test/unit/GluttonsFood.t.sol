@@ -18,10 +18,10 @@ contract GluttonsFoodTest is Test {
     }
 
     uint256 constant STARTING_BALANCE = 400 ether;
-    uint256 public constant PET_PRICE = 162e18;
-    uint256 private constant FOOD7_PRICE = 7e18;
+    uint256 public constant PET_PRICE = 100e18;
+    uint256 private constant FOOD7_PRICE = 14e18;
     // price for 30 ERC721A NFTs.
-    uint256 private constant FOOD30_PRICE = 15e18;
+    uint256 private constant FOOD30_PRICE = 30e18;
 
     Gluttons basicNft;
     GluttonsFood foodNft;
@@ -169,6 +169,11 @@ contract GluttonsFoodTest is Test {
         console2.log("Contract Balance: ",  contractBalance);
         console2.log("Current Balance: ",  currentBalance);
         assertEq(contractBalance, currentBalance);
+    }
+
+    function testTokenUri() public mint7Pack(USER) {
+        string memory uri = foodNft.tokenURI(0);
+        console2.log(uri);
     }
 
 }

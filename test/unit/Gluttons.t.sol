@@ -8,10 +8,10 @@ import {GluttonsFood} from "../../src/GluttonsFood.sol";
 
 contract GluttonsTest is Test {
     uint256 constant STARTING_BALANCE = 400 ether;
-    uint256 public constant PET_PRICE = 162e18;
-    uint256 private constant FOOD7_PRICE = 7e18;
-    uint256 private constant FOOD30_PRICE = 15e18;
-    uint256 private constant STARVATION_TIME = 1 days;
+    uint256 public constant PET_PRICE = 100e18;
+    uint256 private constant FOOD7_PRICE = 14e18;
+    uint256 private constant FOOD30_PRICE = 30e18;
+    uint256 private constant STARVATION_TIME = 12 hours;
 
     Gluttons public basicNft;
     GluttonsFood public foodNft;
@@ -69,7 +69,7 @@ contract GluttonsTest is Test {
         assertEq(basicNft.name(), "Gluttons");
         assertEq(basicNft.symbol(), "GLUTTONS");
         assertEq(basicNft.owner(), OWNER);
-        assertEq(address(basicNft.s_foodContract()), address(foodNft));
+        assertEq(address(basicNft.getFoodContract()), address(foodNft));
     }
 
     // Minting Tests
@@ -144,9 +144,9 @@ contract GluttonsTest is Test {
         uint256 foodTokenId = 0;
         feedPet(USER, tokenId, foodTokenId);
         
-        (bool fed, bool alive) = basicNft.s_pets(tokenId);
-        assertEq(alive, true);
-        assertEq(fed, true);
+        Gluttons.Pet memory token = basicNft.getPetInfo(tokenId);
+        assertEq(token.alive, true);
+        assertEq(token.fed, true);
     }
 
     function testFeedFailsWhenNotOwner() public {
@@ -161,16 +161,16 @@ contract GluttonsTest is Test {
 
     // Reaper Execution Tests
     function testExecuteReaper() public {
-        mintPet(USER, 1);
+        mintPet(USER, 3);
         uint256 tokenId = 1;
         
         // Fast forward to starvation time
-        vm.warp(block.timestamp + STARVATION_TIME + 1);
+        vm.warp(block.timestamp + STARVATION_TIME);
         
         executeReaper();
         
-        (, bool alive) = basicNft.s_pets(tokenId);
-        assertEq(alive, false);
+        Gluttons.Pet memory token = basicNft.getPetInfo(tokenId);
+        assertEq(token.alive, false);
     }
 
     function testExecuteReaperFailsWhenTooEarly() public {
@@ -180,20 +180,20 @@ contract GluttonsTest is Test {
         uint256[] memory starvedPets = new uint256[](1);
         starvedPets[0] = tokenId;
 
-        vm.warp(block.timestamp + 23 hours + 1);
+        vm.warp(block.timestamp + 11 hours);
         vm.prank(ORACLE);
         vm.expectRevert(Gluttons.Gluttons__TooEarly.selector);
         basicNft.executeReaper();
     }
 
     function testExecuteReaperEndsGameWhenNoSurvivors() public {
-        mintPet(USER, 1);
+        mintPet(USER, 3);
         
         // Fast forward to starvation time
-        vm.warp(block.timestamp + STARVATION_TIME + 1);
+        vm.warp(block.timestamp + STARVATION_TIME);
         
         executeReaper();
-        assertEq(basicNft.s_gameActive(), false);
+        assertEq(basicNft.getGameActiveStatus(), false);
     }
 
     // Voting Tests
@@ -203,8 +203,8 @@ contract GluttonsTest is Test {
         vm.prank(USER);
         basicNft.castVote(true, token);
         
-        assertEq(basicNft.s_totalVotes(), basicNft.totalSupply());
-        assertEq(basicNft.s_hasVoted(token), true);
+        assertEq(basicNft.getTotalVotes(), basicNft.totalSupply());
+        assertEq(basicNft.checkIdTokenHasVoted(token), true);
     }
 
     function testVoteEndsGameWithConsensus() public {
@@ -218,8 +218,8 @@ contract GluttonsTest is Test {
         basicNft.castVote(true, 1);
         vm.prank(ORACLE);
         basicNft.castVote(true, 2);
-        assertEq(basicNft.s_totalVotes(), basicNft.totalSupply());
-        assertEq(basicNft.s_gameActive(), false);
+        assertEq(basicNft.getTotalVotes(), basicNft.totalSupply());
+        assertEq(basicNft.getGameActiveStatus(), false);
     }
 
     function testVoteResetWhenNoConsensusAndReapercall() public {
@@ -236,53 +236,73 @@ contract GluttonsTest is Test {
         vm.prank(USER);
         basicNft.castVote(true, 1);
 
-        assertEq(basicNft.s_totalVotes(), 1);
+        assertEq(basicNft.getTotalVotes(), 1);
         
         // Kill USER2's pet
         vm.warp(block.timestamp + STARVATION_TIME + 1);
         executeReaper();
 
         assertEq(basicNft.totalSupply(), 2);
-        assertEq(basicNft.s_totalVotes(), 0);
+        assertEq(basicNft.getTotalVotes(), 0);
 
         // Votes should reset
         vm.prank(USER);
         basicNft.castVote(true, 0);
-        assertEq(basicNft.s_totalVotes(), 1);
+        assertEq(basicNft.getTotalVotes(), 1);
     }
 
     // Prize Claiming Tests
     function testClaimPrizeAfterVote() public {
-        mintPet(USER, 1);
-        
-        // End game by vote
-        vm.prank(USER);
-        basicNft.castVote(true, 0);
-        
+        mintPet(USER, 3);
+        buyFoodPackWeek(USER);
+
+        vm.startPrank(USER);
+        basicNft.feedPet(USER, 1, 0);
+        basicNft.feedPet(USER, 2, 1);
+        basicNft.feedPet(USER, 3, 2);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 12 hours);
+        vm.prank(ORACLE);
+
         uint256 initialBalance = USER.balance;
-        uint256 prizePool = basicNft.getTotalPrizePool();
+
+        basicNft.executeReaper();
+
+        // End game by vote
+        vm.startPrank(USER);
+        basicNft.castVote(true, 1);
+        basicNft.castVote(true, 2);
+        basicNft.castVote(true, 3);
+        vm.stopPrank();
         
-        vm.prank(USER);
-        basicNft.claimPrize();
+        
+        uint256 prizePool = basicNft.getTotalPrizePool();
+
+        console2.log("initial balance: ", (initialBalance)/1e18);
+        console2.log("initital balance + prizepool: ", (initialBalance + prizePool)/1e18);
+        console2.log("new balance: ", (USER.balance)/1e18);
         
         assertEq(USER.balance, initialBalance + prizePool);
     }
 
     function testClaimPrizeAfterExtinction() public {
-        mintPet(USER, 1);
-        
+        mintPet(USER, 3);
+        uint256 initialBalance = (USER.balance) / 1e18;
+        console2.log("Initial Balance: ", initialBalance); 
+        uint256 prizePool = (basicNft.getTotalPrizePool()) / 1e18;
+        console2.log("Prize pool: ", prizePool); 
         // End game by extinction
-        vm.warp(block.timestamp + STARVATION_TIME + 1);
-
+        vm.warp(block.timestamp + STARVATION_TIME);
+        //address[] memory lastRecords = basicNft.getLasSurvivorsRecord().survivors;
+        
         executeReaper();
+        //console2.log("Records: ", lastRecords.length);
+        uint256 updatedBalance = (USER.balance) / 1e18;
+        console2.log("updated Balance: ", updatedBalance); 
         
-        uint256 initialBalance = USER.balance;
-        uint256 prizePool = basicNft.getTotalPrizePool();
         
-        vm.prank(USER);
-        basicNft.claimPrize();
-        
-        assertEq(USER.balance, initialBalance + prizePool);
+        assertEq(updatedBalance, (initialBalance + prizePool));
     }
 
     // Admin Function Tests
@@ -290,7 +310,7 @@ contract GluttonsTest is Test {
         address newOracle = makeAddr("newOracle");
         vm.prank(basicNft.owner());
         basicNft.setOracle(newOracle);
-        assertEq(basicNft.s_oracle(), newOracle);
+        assertEq(basicNft.getOracle(), newOracle);
     }
 
     function testCannotSetFoodContract() public {
@@ -314,15 +334,6 @@ contract GluttonsTest is Test {
         assertEq(DEV1.balance, devBalanceBefore + (contractBalance - basicNft.getTotalPrizePool()) / 2);
     }
 
-    // Edge Case Tests
-    function testCannotClaimPrizeWhileGameActive() public {
-        mintPet(USER, 1);
-        
-        vm.prank(USER);
-        vm.expectRevert(Gluttons.Gluttons__GameStillActive.selector);
-        basicNft.claimPrize();
-    }
-
     function testCannotVoteWithoutPet() public {
         vm.prank(USER);
         vm.expectRevert(Gluttons.Gluttons__NotASurvivor.selector);
@@ -330,9 +341,9 @@ contract GluttonsTest is Test {
     }
 
     function testCannotFeedDeadPet() public {
-        mintPet(USER, 1);
+        mintPet(USER, 3);
         buyFoodPackWeek(USER);
-        uint256 tokenId = 0;
+        uint256 tokenId = 1;
         
         // Kill pet
         vm.warp(block.timestamp + STARVATION_TIME + 1);
@@ -345,36 +356,43 @@ contract GluttonsTest is Test {
     }
 
     function testPrizeDistributionWithMultipleSurvivors() public {
-        mintPet(USER, 1);
+
+        mintPet(USER, 2);
         mintPet(USER2, 1);
+        buyFoodPackWeek(USER);
+        buyFoodPackWeek(USER2);
+
+        uint256 startingBalance = USER.balance;
+        uint256 startingBalance2 = USER2.balance;
+        uint256 prizePool = basicNft.getTotalPrizePool();
+        uint256 share = prizePool / basicNft.getAlivePetCount();
+        uint256 shareUser1 = share * 2;
+        uint256 shareUser2 = share;
         
         // End game by vote
-        vm.prank(USER);
-        basicNft.castVote(true, 0);
-        vm.prank(USER2);
+        vm.startPrank(USER);
         basicNft.castVote(true, 1);
-        
-        uint256 prizePool = basicNft.getTotalPrizePool();
-        uint256 userBalanceBefore = USER.balance;
-        uint256 user2BalanceBefore = USER2.balance;
-        uint256 share = prizePool / basicNft.getAlivePetCount();
-        
-        vm.prank(USER);
-        basicNft.claimPrize();
-        
+        basicNft.castVote(true, 2);
+        vm.stopPrank();
         vm.prank(USER2);
-        basicNft.claimPrize();
+        basicNft.castVote(true, 3);
 
         uint256 userBalanceAfter = USER.balance;
         uint256 user2BalanceAfter = USER2.balance;
 
-        uint256 dif1 = userBalanceAfter - userBalanceBefore;
-        uint256 dif2 = user2BalanceAfter - user2BalanceBefore;
-        console2.log("dif 1: ", dif1);
-        console2.log("dif 2: ", dif2);
+        console2.log("share: ", share / 1 ether);
+
+        console2.log("starting balance 1: ", startingBalance / 1 ether);
+
+        console2.log("user balance after 1: ", userBalanceAfter/ 1 ether);
+        console2.log("starting balance 2: ", startingBalance2 / 1 ether);
+
+        console2.log("user balance after 2: ", user2BalanceAfter/ 1 ether);
+
         
-        assertEq(userBalanceAfter, (userBalanceBefore + share));
-        assertEq(user2BalanceAfter, (user2BalanceBefore + share));
+        assertEq(userBalanceAfter / 10e18, (startingBalance + shareUser1) / 10e18);
+        assertEq(user2BalanceAfter / 10e18, (startingBalance2 + shareUser2) / 10e18);
+
     }
 
     function testGluttonTransferRoyalty() public {

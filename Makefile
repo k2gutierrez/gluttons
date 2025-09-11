@@ -4,9 +4,13 @@
 
 build :; forge build
 
+solxbuild :; FOUNDRY_PROFILE=solx forge build
+
 test :; forge test
 
-install :; forge install cyfrin/foundry-devops --no-commit && forge install foundry-rs/forge-std --no-commit && forge install openzeppelin/openzeppelin-contracts --no-commit
+solxtest :; FOUNDRY_PROFILE=solx forge test
+
+install :; forge install cyfrin/foundry-devops && forge install foundry-rs/forge-std && forge install openzeppelin/openzeppelin-contracts && forge install chiru-labs/ERC721A
 
 deploy-mingles-curtis :
 	@forge script script/DeployBasicNFT.s.sol:DeployMingles --rpc-url $(CURTIS_RPC_URL) --account defaultk2 --broadcast --verify --etherscan-api-key $(APESCAN_API_KEY) -vvvv

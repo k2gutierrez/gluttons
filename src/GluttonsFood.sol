@@ -5,6 +5,8 @@
     import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
     import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
     import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
+    import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+    import {GluttonsFoodImage} from "./GluttonsFoodImage.sol";
 
     /**
      * @title GluttonsFood
@@ -16,7 +18,7 @@
      * @author X - CarlosDappsDev.eth
      * @author 0xca067E20db2cDEF80D1c7130e5B71C42c0305529
      */
-    contract GluttonsFood is ERC721A, Ownable, ReentrancyGuard {
+    contract GluttonsFood is ERC721A, Ownable, ReentrancyGuard, GluttonsFoodImage {
 
         /* CUSTOM ERRORS */
         error GluttonsFood__NotEnoughApe();
@@ -36,9 +38,9 @@
 
         /* CONSTANTS */
         // price for 7 ERC721A NFTs.
-        uint256 private constant FOOD7_PRICE = 7e18;
+        uint256 private constant FOOD7_PRICE = 14e18;
         // price for 30 ERC721A NFTs.
-        uint256 private constant FOOD30_PRICE = 15e18;
+        uint256 private constant FOOD30_PRICE = 30e18;
         
         // address of the developer 1.
         address private immutable i_dev1;
@@ -73,7 +75,7 @@
         }
 
         constructor(address _dev1, address _dev2, address _gameContract) 
-        ERC721A("GluttonsFood", "GsFOOD") 
+        ERC721A("GluttonsFood", "GtnsFOOD") 
         Ownable(msg.sender)
         {
             i_dev1 = _dev1;
@@ -93,7 +95,7 @@
          * function to purchase 7 NFTs, track balances and send the eth to developers and the game address.
          */
         function mintFoodPackWeek(address _user) external payable nonReentrant returns(bool) {
-            if (ERC721A(i_gluttonsGameContract).balanceOf(_user) == 0) revert GluttonsFood__NotAGluttonsNFTHolder();
+            if (ERC721A(getGluttonsGameContract()).balanceOf(_user) == 0) revert GluttonsFood__NotAGluttonsNFTHolder();
             if (msg.value < FOOD7_PRICE) revert GluttonsFood__NotEnoughApe();
             uint256 pack = 7;
             _mint(_user, pack);
@@ -121,7 +123,7 @@
          * function to purchase 30 NFTs, track balances and send the eth to developers and the game address.
          */
         function mintFoodPackMonth(address _user) external payable nonReentrant returns(bool) {
-            if (ERC721A(i_gluttonsGameContract).balanceOf(_user) == 0) revert GluttonsFood__NotAGluttonsNFTHolder();
+            if (ERC721A(getGluttonsGameContract()).balanceOf(_user) == 0) revert GluttonsFood__NotAGluttonsNFTHolder();
             if (msg.value < FOOD30_PRICE) revert GluttonsFood__NotEnoughApe();
             uint256 pack = 30;
             _mint(_user, pack);
@@ -192,6 +194,22 @@
                 }
             }
         }
+
+        function _baseURI() internal pure override returns(string memory){
+            return "data:application/json;base64,";
+        }
+
+        /**
+         * Token Uri
+         */
+        function tokenURI(uint256 tokenId) public view override returns (string memory){
+
+            string memory token = Strings.toString(tokenId);
+
+            return string(abi.encodePacked(_baseURI(),
+            Base64.encode(bytes(abi.encodePacked('{"name": "', name(), ' #', token, '", "description": "An NFT that serves as food for a Glutton.", "attributes": [{"trait_type": "Gluttony", "value": 100}], "image": "', GLUTTONS_FOOD_IMAGE, '"}')))));
+        }
+
 
         /**
          * Returns the Gluttons Game Contract.
