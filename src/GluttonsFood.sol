@@ -187,7 +187,7 @@
             address to,
             uint256 startTokenId,
             uint256 quantity
-        ) internal virtual override {
+        ) internal override view {
             if (from != address(0) && to != address(0)) {
                 if (checkTransferStatus() == false){
                     revert GluttonsFood__transferNotAllowed();

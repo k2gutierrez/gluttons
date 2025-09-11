@@ -738,7 +738,6 @@ contract Gluttons is
      */
     function _beforeTokenTransfers(address from, address to, uint256 startTokenId, uint256 quantity)
         internal
-        virtual
         override
     {
         if (from != address(0) && to != address(0)) {
