@@ -34,7 +34,7 @@ contract GluttonsIntegration is Test {
     uint256 private constant STARVATION_TIME = 12 hours;
 
     function setUp() public {
-        deployer = new DeployGluttons(DEV1, DEV2);
+        deployer = new DeployGluttons();
         (basicNft, foodNft, OWNER) = deployer.run();
         vm.deal(USER, STARTING_BALANCE);
         vm.deal(USER2, STARTING_BALANCE);
@@ -42,9 +42,6 @@ contract GluttonsIntegration is Test {
         uint256 mintAmount = 3;
 
         vm.startPrank(basicNft.owner());
-        //body 4, pattern 4, mouth 39, lefteyes 36, righteyes 36
-        uint256[5] memory traits = [uint256(3),uint256(1), uint256(16), uint256(22), uint256(8)];
-        basicNft.setTokenTraits(1, traits);
         basicNft.setOracle(ORACLE);
         vm.stopPrank();
 
@@ -125,7 +122,7 @@ contract GluttonsIntegration is Test {
             vm.stopPrank();
         }
 
-        string memory basicUri = basicNft.tokenURI(tokenId);
+        string memory basicUri = basicNft.tokenURI(3);
         console2.log(basicUri);
 
     }

@@ -5,13 +5,15 @@ import {ERC721A} from "@ERC721A/contracts/ERC721A.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
-import {GluttonsFood} from "./GluttonsFood.sol";
+import {IGluttonsFood} from "./interfaces/IGluttonsFood.sol";
 import {GluttonEggs} from "./GluttonEggs.sol";
 import {GluttonsBGBody} from "./GluttonsBGBody.sol";
 import {GluttonsPattern} from "./GluttonsPattern.sol";
 import {GluttonsMouth} from "./GluttonsMouth.sol";
 import {GluttonsRightEye} from "./GluttonsRightEye.sol";
 import {GluttonsLeftEye} from "./GluttonsLeftEye.sol";
+import {GluttonTraitsA} from "./GluttonTraitsA.sol";
+import {GluttonTraitsB} from "./GluttonTraitsB.sol";
 
 /**
  * @title Gluttons
@@ -26,13 +28,7 @@ import {GluttonsLeftEye} from "./GluttonsLeftEye.sol";
 contract Gluttons is
     ERC721A,
     Ownable,
-    ReentrancyGuard,
-    GluttonEggs,
-    GluttonsBGBody,
-    GluttonsPattern,
-    GluttonsMouth,
-    GluttonsRightEye,
-    GluttonsLeftEye
+    ReentrancyGuard
 {
     /* CUSTOM ERRORS */
     error Gluttons__GameEnded();
@@ -70,13 +66,13 @@ contract Gluttons is
     }
 
     // Struct of traits for the on-chain NFT
-    struct GluttonTraits {
+    /*struct GluttonTraits {
         uint256 Body;
         uint256 Pattern;
         uint256 Mouth;
         uint256 LeftEye;
         uint256 RightEye;
-    }
+    }*/
 
     // List of addresses of the owners of the alive Gluttons
     struct SurvivorRecord {
@@ -88,16 +84,16 @@ contract Gluttons is
     //mapping(address winner => bool claimed) private s_addressClaimed;
 
     // Traits variables
-    mapping(uint256 => GluttonTraits) private s_tokenTraits;
+    //mapping(uint256 => GluttonTraits) private s_tokenTraits;
     
     // Used to see if the traits are locked or not
-    bool private s_traitsLocked = false;
+    //bool private s_traitsLocked = false;
 
     // Game parameters
     /// Pet price
-    uint256 private constant PET_PRICE = 100e18;
+    uint256 private constant PET_PRICE = 1e5; // 100e18   1e5
     /// time for starvation, for reapercall
-    uint256 private constant STARVATION_TIME = 12 hours;//1 days;
+    uint256 private constant STARVATION_TIME = 2 minutes; //12 hours;   2 minutes
     /// maximum amount of pets that can be minted
     uint256 private constant MAX_PETS = 1000;
     /// Reaper checks if there is a winner or extinction if certain amount of nfts have been minted
@@ -166,7 +162,7 @@ contract Gluttons is
     //    return s_addressClaimed[msg.sender];
     //}
 
-    function setlockTraits() external onlyOwner {
+    /*function setlockTraits() external onlyOwner {
         s_traitsLocked = !s_traitsLocked;
     }
 
@@ -194,32 +190,39 @@ contract Gluttons is
                 s_tokenTraits[token].RightEye = traits[i][4];
             }
         }
-    }
+    }*/
 
-    function _generateSVG(uint256 tokenId) private view returns (string memory) {
-        GluttonTraits memory traits = s_tokenTraits[tokenId];
-        string[4] memory body = _GluttonsBodyArr();
-        string[4] memory pattern = _GluttonsPatternArr();
-        string[39] memory mouth = _GluttonsMouthArr();
-        string[36] memory leftEye = _GluttonsLeftEyeArr();
-        string[36] memory rightEye = _GluttonsRightEyeArr();
+    function _generateSVG(uint256 tokenId) private pure returns (string memory) {
+        // GluttonTraits memory traits = s_tokenTraits[tokenId];
+        uint256[5] memory traits;
+        if (tokenId <= 500) {
+            traits = GluttonTraitsA.getTrait(tokenId);
+        } else {
+            traits = GluttonTraitsB.getTrait(tokenId);
+        }
+
+        string[4] memory body = GluttonsBGBody._GluttonsBodyArr();
+        string[4] memory pattern = GluttonsPattern._GluttonsPatternArr();
+        string[39] memory mouth = GluttonsMouth._GluttonsMouthArr();
+        string[36] memory leftEye = GluttonsLeftEye._GluttonsLeftEyeArr();
+        string[36] memory rightEye = GluttonsRightEye._GluttonsRightEyeArr();
 
         // Use abi.encodePacked for gas efficiency
         return string(
             abi.encodePacked(
                 '<svg data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048.06 2048.2" preserveAspectRatio="xMidYMid meet">',
                 '<image x="0" y="0" width="2048" height="2048" href="',
-                _GluttonsBackground(),
+                GluttonsBGBody._GluttonsBackground(),
                 '" />' '<image x="0" y="0" width="2048" height="2048" href="',
-                body[traits.Body],
+                body[traits[0]],
                 '"/>' '<image x="0" y="0" width="2048" height="2048" href="',
-                pattern[traits.Pattern],
+                pattern[traits[1]],
                 '"/>' '<image x="0" y="0" width="2048" height="2048" href="',
-                mouth[traits.Mouth],
+                mouth[traits[2]],
                 '"/>' '<image x="0" y="0" width="2048" height="2048" href="',
-                leftEye[traits.LeftEye],
+                leftEye[traits[3]],
                 '"/>' '<image x="0" y="0" width="2048" height="2048" href="',
-                rightEye[traits.RightEye],
+                rightEye[traits[4]],
                 '"/>' "</svg>"
             )
         );
@@ -282,21 +285,28 @@ contract Gluttons is
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
 
-        GluttonTraits memory traits = s_tokenTraits[tokenId];
+        // GluttonTraits memory traits = s_tokenTraits[tokenId];
+        uint256[5] memory traits;
+        if (tokenId <= 500) {
+            traits = GluttonTraitsA.getTrait(tokenId);
+        } else {
+            traits = GluttonTraitsB.getTrait(tokenId);
+        }
+
         Pet memory glutton = s_pets[tokenId];
         uint256 hatch = 7;
         uint256 petHatch = 14;
         string memory egg;
 
         if (glutton.timesFed < hatch) {
-            if (traits.Body == 0) {
-                egg = _getUnhatchedEggs()[0];
-            } else if (traits.Body == 1) {
-                egg = _getUnhatchedEggs()[1];
-            } else if (traits.Body == 2) {
-                egg = _getUnhatchedEggs()[2];
+            if (traits[0] == 0) {
+                egg = GluttonEggs._getUnhatchedEggs()[0];
+            } else if (traits[0] == 1) {
+                egg = GluttonEggs._getUnhatchedEggs()[1];
+            } else if (traits[0] == 2) {
+                egg = GluttonEggs._getUnhatchedEggs()[2];
             } else {
-                egg = _getUnhatchedEggs()[3];
+                egg = GluttonEggs._getUnhatchedEggs()[3];
             }
 
             return _unHatchedEggURI(tokenId, egg, glutton.timesFed);
@@ -323,14 +333,14 @@ contract Gluttons is
 
             return string(abi.encodePacked("data:application/json;base64,", json1));*/
         } else if (glutton.timesFed >= hatch && glutton.timesFed < petHatch) {
-            if (traits.Body == 0) {
-                egg = _getHatchedEggs()[0];
-            } else if (traits.Body == 1) {
-                egg = _getHatchedEggs()[1];
-            } else if (traits.Body == 2) {
-                egg = _getHatchedEggs()[2];
+            if (traits[0] == 0) {
+                egg = GluttonEggs._getHatchedEggs()[0];
+            } else if (traits[0] == 1) {
+                egg = GluttonEggs._getHatchedEggs()[1];
+            } else if (traits[0] == 2) {
+                egg = GluttonEggs._getHatchedEggs()[2];
             } else {
-                egg = _getHatchedEggs()[3];
+                egg = GluttonEggs._getHatchedEggs()[3];
             }
 
             return _hatchedEggURI(tokenId, egg, glutton.timesFed);
@@ -362,7 +372,7 @@ contract Gluttons is
             string memory image = string(abi.encodePacked("data:image/svg+xml;base64,", Base64.encode(bytes(svgImage))));
 
             // Build metadata
-            return _gluttonAlreadyHatchedURI(tokenId, image, traits.Body, traits.Pattern, traits.Mouth, traits.LeftEye, traits.RightEye);
+            return _gluttonAlreadyHatchedURI(tokenId, image, traits[0], traits[1], traits[2], traits[3], traits[4]);
             /*string memory json = Base64.encode(
                 bytes(
                     string(
@@ -408,15 +418,15 @@ contract Gluttons is
                             _image,
                             '",',
                             '"attributes": [',
-                            _traitAttribute("Body", _GluttonsBodyArr1()[_body]),
+                            _traitAttribute("Body", GluttonsBGBody._GluttonsBodyArr1()[_body]),
                             ",",
-                            _traitAttribute("Pattern", _GluttonsPatternArr1()[_pattern]),
+                            _traitAttribute("Pattern", GluttonsPattern._GluttonsPatternArr1()[_pattern]),
                             ",",
-                            _traitAttribute("Mouth", _GluttonsMouthArr1()[_mouth]),
+                            _traitAttribute("Mouth", GluttonsMouth._GluttonsMouthArr1()[_mouth]),
                             ",",
-                            _traitAttribute("Left eye", _GluttonsLeftEyeArr1()[_leftEye]),
+                            _traitAttribute("Left eye", GluttonsLeftEye._GluttonsLeftEyeArr1()[_leftEye]),
                             ",",
-                            _traitAttribute("Right eye", _GluttonsRightEyeArr1()[_rightEye]),
+                            _traitAttribute("Right eye", GluttonsRightEye._GluttonsRightEyeArr1()[_rightEye]),
                             "]",
                             "}"
                         )
@@ -464,9 +474,9 @@ contract Gluttons is
      */
     function buyFoodPackWeek(address _user) external payable nonReentrant {
         if (!s_gameActive) revert Gluttons__GameEnded();
-        if (msg.value < GluttonsFood(getFoodContract()).getFoodPrice7Pack()) revert Gluttons__IncorrectEthAmount(msg.value);
+        if (msg.value < IGluttonsFood(getFoodContract()).getFoodPrice7Pack()) revert Gluttons__IncorrectEthAmount(msg.value);
 
-        bool success = GluttonsFood(getFoodContract()).mintFoodPackWeek{value: msg.value}(_user);
+        bool success = IGluttonsFood(getFoodContract()).mintFoodPackWeek{value: msg.value}(_user);
         /*(bool success, ) = s_foodContract.call{value: FOOD7_PRICE}(
             abi.encodeWithSignature("mintFoodPackWeek(address)", _user)
         );*/
@@ -483,8 +493,8 @@ contract Gluttons is
      */
     function buyFoodPackMonth(address _user) external payable nonReentrant {
         if (!s_gameActive) revert Gluttons__GameEnded();
-        if (msg.value < GluttonsFood(getFoodContract()).getFoodPrice30Pack()) revert Gluttons__IncorrectEthAmount(msg.value);
-        bool success = GluttonsFood(getFoodContract()).mintFoodPackMonth{value: msg.value}(_user);
+        if (msg.value < IGluttonsFood(getFoodContract()).getFoodPrice30Pack()) revert Gluttons__IncorrectEthAmount(msg.value);
+        bool success = IGluttonsFood(getFoodContract()).mintFoodPackMonth{value: msg.value}(_user);
         /*(bool success, ) = s_foodContract.call{value: FOOD30_PRICE}(
             abi.encodeWithSignature("mintFoodPackMonth(address)", _user)
         );*/
@@ -503,7 +513,7 @@ contract Gluttons is
         if (s_pets[petId].alive == false) revert Gluttons__PetIsDead();
         if (s_pets[petId].fed == true) revert Gluttons__PetAlreadyFed();
 
-        bool success = GluttonsFood(s_foodContract).feedGlutton(_user, foodId);
+        bool success = IGluttonsFood(s_foodContract).feedGlutton(_user, foodId);
 
         /*(bool success, ) = s_foodContract.call(
             abi.encodeWithSignature("feedGlutton(address, uint256)", _user, foodId)
@@ -748,6 +758,7 @@ contract Gluttons is
                 s_totalPrizePool += royalty;
             }
         }
+        super._beforeTokenTransfers(from, to, startTokenId, quantity);
     }
 
     /**
@@ -819,9 +830,9 @@ contract Gluttons is
         return s_oracle;
     }
 
-    function getTraitsLockedStatus() external view returns(bool) {
+    /*function getTraitsLockedStatus() external view returns(bool) {
         return s_traitsLocked;
-    }
+    }*/
 
     function getPetPrice() external pure returns(uint256) {
         return PET_PRICE;

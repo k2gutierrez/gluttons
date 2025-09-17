@@ -31,7 +31,7 @@ contract GluttonsBeforeTest is Test {
     address Oracle = makeAddr("oracle");
 
     function setUp() public {
-        deployer = new DeployGluttons(DEV1, DEV2);
+        deployer = new DeployGluttons();
         (basicNft, foodNft, OWNER) = deployer.run();
 
         vm.deal(USER, STARTING_BALANCE);

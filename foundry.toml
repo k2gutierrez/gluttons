@@ -6,10 +6,16 @@ remappings = [
     "@openzeppelin/contracts=lib/openzeppelin-contracts/contracts",
     "@ERC721A/contracts=lib/ERC721A/contracts"
 ]
-via_ir = false
+via_ir = true
 optimizer = true
 optimizer_runs = 200
+ffi = true #to run commands like minting, it's better to leave it on false
+fs_permissions = [{access = "read", path = "./broadcast/"}]
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
 
 [profile.solx]
 solc_version = "/Users/carlosgutierrez/.local/bin/solx"
+optimizer = true
+optimizer_runs = 200
+ffi = true #to run commands like minting, it's better to leave it on false
+fs_permissions = [{access = "read", path = "./broadcast/"}]

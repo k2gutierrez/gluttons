@@ -6,7 +6,7 @@
     import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
     import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
     import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-    import {GluttonsFoodImage} from "./GluttonsFoodImage.sol";
+    //import {GluttonsFoodImage} from "./GluttonsFoodImage.sol";
 
     /**
      * @title GluttonsFood
@@ -18,7 +18,7 @@
      * @author X - CarlosDappsDev.eth
      * @author 0xca067E20db2cDEF80D1c7130e5B71C42c0305529
      */
-    contract GluttonsFood is ERC721A, Ownable, ReentrancyGuard, GluttonsFoodImage {
+    contract GluttonsFood is ERC721A, Ownable, ReentrancyGuard {
 
         /* CUSTOM ERRORS */
         error GluttonsFood__NotEnoughApe();
@@ -38,9 +38,11 @@
 
         /* CONSTANTS */
         // price for 7 ERC721A NFTs.
-        uint256 private constant FOOD7_PRICE = 14e18;
+        uint256 private constant FOOD7_PRICE = 1e4; // 14e18   1e4
         // price for 30 ERC721A NFTs.
-        uint256 private constant FOOD30_PRICE = 30e18;
+        uint256 private constant FOOD30_PRICE = 2e4; // 30e18   2e4
+        // Gluttons Image
+        string private constant GLUTTONS_FOOD_IMAGE = "mmjsnjpbtl5ljiubjf5wz3m4mo4nn7pti4cfj34cib24zlc636aq.ardrive.net/YxMmpeGa-rSigUl7bO2cY7jW_fNHBFTvgkB1zKxe34E?";
         
         // address of the developer 1.
         address private immutable i_dev1;
@@ -187,12 +189,13 @@
             address to,
             uint256 startTokenId,
             uint256 quantity
-        ) internal override view {
+        ) internal override {
             if (from != address(0) && to != address(0)) {
                 if (checkTransferStatus() == false){
                     revert GluttonsFood__transferNotAllowed();
                 }
             }
+            super._beforeTokenTransfers(from, to, startTokenId, quantity);
         }
 
         function _baseURI() internal pure override returns(string memory){

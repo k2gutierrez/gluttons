@@ -26,7 +26,7 @@ contract GluttonsTest is Test {
     address OWNER;
 
     function setUp() public {
-        deployer = new DeployGluttons(DEV1, DEV2);
+        deployer = new DeployGluttons();
         (basicNft, foodNft, OWNER) = deployer.run();
 
         vm.deal(USER, STARTING_BALANCE);
